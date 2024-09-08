@@ -2,7 +2,7 @@ import sys
 import platform
 import aiohttp
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 import time
 
 
@@ -16,7 +16,7 @@ async def parse_response(json_response, currencies: list):
     parsed_currencies_list = [el for el in exchange_rate_list if el['currency'] in currencies]
     for el in parsed_currencies_list:
         parsed_dict.update({el['currency']: {'sale': el['saleRate'], 'purchase': el['purchaseRate']}})
-    return parsed_dict
+    return {date.today().strftime('%d.%m.%Y'): parsed_dict}
 
 
 async def get_response(session, url, currencies: list):
@@ -31,8 +31,8 @@ async def get_response(session, url, currencies: list):
 async def make_links(number_of_days):
     list_of_links = []
     for i in range(number_of_days):
-        day = date.today().replace(day=date.today().day - i).strftime('%d.%m.%Y')
-        list_of_links.append(LINK_TEMPLATE.format(day))
+        day = date.today() - timedelta(days=i)
+        list_of_links.append(LINK_TEMPLATE.format(day.strftime('%d.%m.%Y')))
     return list_of_links
 
 
