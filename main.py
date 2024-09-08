@@ -6,8 +6,7 @@ from datetime import date
 import time
 
 
-today_date = date.today()
-today_date_str = today_date.replace(day=today_date.day).strftime('%d.%m.%Y')
+LINK_TEMPLATE = 'https://api.privatbank.ua/p24api/exchange_rates?date={}'
 MAX_HISTORY_DAYS = 10
 
 
@@ -20,28 +19,30 @@ async def parse_response(json_response, currencies: list):
     return parsed_dict
 
 
-async def fet_dates(number_of_days):
-    list_of_dates = []
-    for day in range(number_of_days):
-        list_of_dates.append(today_date.replace(day=today_date.day - (day + 1)).strftime('%d.%m.%Y'))
-    return list_of_dates
+async def get_response(session, url, currencies: list):
+    start_time = time.time()
+    async with session.get(url) as response:
+        if response.status == 200:
+            json_result = await response.json()
+            print(f'request for {url} took: {time.time() - start_time} seconds')
+            return await parse_response(json_result, currencies)
+
+
+async def make_links(number_of_days):
+    list_of_links = []
+    for i in range(number_of_days):
+        day = date.today().replace(day=date.today().day - i).strftime('%d.%m.%Y')
+        list_of_links.append(LINK_TEMPLATE.format(day))
+    return list_of_links
 
 
 async def main(number_of_days, currencies: list):
-    list_of_currencies = []
-    list_of_days = await fet_dates(number_of_days)
+    list_of_links = await make_links(number_of_days)
+    tasks = []
     async with aiohttp.ClientSession() as session:
-        for day in list_of_days:
-            link_pb_api = f'https://api.privatbank.ua/p24api/exchange_rates?date={day}'
-            async with session.get(link_pb_api) as response:
-                if response.status == 200:
-                    try:
-                        json_result = await response.json()
-                    except aiohttp.ClientConnectorError as err:
-                        print(f'Connection error: {link_pb_api}', str(err))
-
-                    list_of_currencies.append({day: await parse_response(json_result, currencies)})
-        return list_of_currencies
+        for url in list_of_links:
+            tasks.append(get_response(session, url, currencies))
+        return await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
