@@ -56,7 +56,7 @@ async def main(currencies: list, number_of_days=1):
 if __name__ == "__main__":
     if len(sys.argv) == 2 and sys.argv[1].isdigit() and int(sys.argv[1]) <= MAX_HISTORY_DAYS:
         history_days = int(sys.argv[1])
-    elif len(sys.argv) >= 3:
+    elif len(sys.argv) >= 3 and sys.argv[1].isdigit() and int(sys.argv[1]) <= MAX_HISTORY_DAYS:
         _, history_days, *currencies_args = sys.argv
         currencies_list.extend(currencies_args)
 
