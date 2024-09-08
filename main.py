@@ -49,6 +49,8 @@ async def make_links(number_of_days):
 
 
 async def main(currencies: list, number_of_days=1):
+    if number_of_days > MAX_HISTORY_DAYS:
+        number_of_days = 10
     list_of_links = await make_links(number_of_days)
     tasks = []
     async with aiohttp.ClientSession() as session:
@@ -61,13 +63,11 @@ if __name__ == "__main__":
     if (
         len(sys.argv) == 2
         and sys.argv[1].isdigit()
-        and int(sys.argv[1]) <= MAX_HISTORY_DAYS
     ):
         history_days = int(sys.argv[1])
     elif (
         len(sys.argv) >= 3
         and sys.argv[1].isdigit()
-        and int(sys.argv[1]) <= MAX_HISTORY_DAYS
     ):
         _, history_days, *currencies_args = sys.argv
         currencies_list.extend(currencies_args)
