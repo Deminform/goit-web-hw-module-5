@@ -8,10 +8,14 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.12"
 aiopath = "^0.7.7"
-aioshutil = "^1.5"
 aiohttp = "^3.10.5"
 websockets = "^13.0.1"
 names = "^0.3.0"
+
+[tool.poetry.group.dev.dependencies]
+black = {extras = ["d"], version = "^24.8.0"}
+isort = "^5.13.2"
+autoflake = "^2.3.1"
 
 
 [build-system]
