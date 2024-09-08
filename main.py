@@ -3,29 +3,37 @@ import platform
 import aiohttp
 import asyncio
 from datetime import date, timedelta
-import time
 
 
 LINK_TEMPLATE = 'https://api.privatbank.ua/p24api/exchange_rates?date={}'
 MAX_HISTORY_DAYS = 10
 
+currencies_list = ['EUR', 'USD']
+history_days = 1
+
 
 async def parse_response(json_response, currencies: list):
     parsed_dict = {}
+    date_from_response = json_response['date']
     exchange_rate_list = json_response['exchangeRate']
     parsed_currencies_list = [el for el in exchange_rate_list if el['currency'] in currencies]
     for el in parsed_currencies_list:
         parsed_dict.update({el['currency']: {'sale': el['saleRate'], 'purchase': el['purchaseRate']}})
-    return {date.today().strftime('%d.%m.%Y'): parsed_dict}
+    return {date_from_response: parsed_dict}
 
 
 async def get_response(session, url, currencies: list):
-    start_time = time.time()
-    async with session.get(url) as response:
-        if response.status == 200:
-            json_result = await response.json()
-            print(f'request for {url} took: {time.time() - start_time} seconds')
-            return await parse_response(json_result, currencies)
+    try:
+        async with session.get(url) as response:
+            if response.status == 200:
+                json_result = await response.json()
+                return await parse_response(json_result, currencies)
+    except aiohttp.ClientConnectorError as err:
+        print(f'Connection error: {url}', str(err))
+    except aiohttp.ClientResponseError as err:
+        print(f'Server response error: {url}', str(err))
+    except asyncio.TimeoutError:
+        print(f'Request timed out for {url}')
 
 
 async def make_links(number_of_days):
@@ -36,20 +44,16 @@ async def make_links(number_of_days):
     return list_of_links
 
 
-async def main(number_of_days, currencies: list):
+async def main(currencies: list, number_of_days=1):
     list_of_links = await make_links(number_of_days)
     tasks = []
     async with aiohttp.ClientSession() as session:
         for url in list_of_links:
             tasks.append(get_response(session, url, currencies))
-        return await asyncio.gather(*tasks)
+        return await asyncio.gather(*tasks, return_exceptions=True)
 
 
 if __name__ == "__main__":
-    start = time.time()
-    currencies_list = ['USD', 'EUR']
-    history_days = 1
-
     if len(sys.argv) == 2 and sys.argv[1].isdigit() and int(sys.argv[1]) <= MAX_HISTORY_DAYS:
         history_days = int(sys.argv[1])
     elif len(sys.argv) >= 3:
@@ -59,7 +63,5 @@ if __name__ == "__main__":
     if platform.system() == 'Windows':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    request_result = asyncio.run(main(int(history_days), currencies_list))
+    request_result = asyncio.run(main(currencies_list, int(history_days)))
     print(request_result)
-    print(time.time() - start)
-
